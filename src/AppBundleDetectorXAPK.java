@@ -28,7 +28,7 @@ public class AppBundleDetectorXAPK {
     private File apkFile;
     private List<String[]> dependencies;
     private File outputFile;
-    private Database database;
+    public Database database;
 
     private BaseAPK baseAPK;
     private List<ConfigAPK> configAPK;

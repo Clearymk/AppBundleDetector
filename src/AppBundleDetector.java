@@ -24,6 +24,7 @@ public class AppBundleDetector {
             AppBundleDetectorXAPK appBundleDetector = new AppBundleDetectorXAPK(tasks.poll().getAbsolutePath());
             try{
                 appBundleDetector.run();
+                appBundleDetector.database.connection.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
