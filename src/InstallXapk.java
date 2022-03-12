@@ -224,29 +224,43 @@ public class InstallXapk {
                 printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-write %s base%d.apk /data/local/tmp/%s", session, i, installTask.get(i).getLocation().getName())));
             }
 
-            printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-commit %s", session)));
 
+            waitInstallFinish(session);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return false;
         }
-        waitInstallFinish();
+
         boolean flag = LaunchAndCheck();
         deleteAndUninstall(installTask);
         return flag;
     }
 
-    private void waitInstallFinish() {
+    private void waitInstallFinish(int session) {
         try {
             boolean flag = true;
+
+            Process p;
+            p = Runtime.getRuntime().exec(String.format("adb shell pm install-commit %s", session));
+            p.waitFor();
+
+            BufferedReader
+                    stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line;
+            while ((line = stdInput.readLine()) != null) {
+                if (line.contains("Failure")) {
+                    flag = false;
+                    System.out.println(line);
+                }
+            }
+
+
             while (flag) {
-                Process p;
                 p = Runtime.getRuntime().exec("adb shell pm list packages");
                 p.waitFor();
 
-                BufferedReader
-                        stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                String line;
+                stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
                 while ((line = stdInput.readLine()) != null) {
                     if (line.contains(this.baseAPK.getAppID())) {
                         flag = false;
