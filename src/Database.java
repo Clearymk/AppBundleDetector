@@ -106,6 +106,41 @@ public class Database {
         }
     }
 
+    public int queryDependencyTypeByAppID(String appId) {
+        try {
+            String querySql = "select type from apk_dependency where src_apk_id=?";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            queryStmt.setString(1, appId);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            }
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+    public void updateDependencyUnknown(String appId, String srcApkId) {
+        try {
+            String updateSql = "update apk_dependency set dest_apk_id = ? and type = 2 where src_apk_id=? and type=3";
+
+            PreparedStatement updateStmt = connection.prepareStatement(updateSql);
+
+            updateStmt.setString(1, appId);
+            updateStmt.setString(2, srcApkId);
+
+            updateStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) {
         Database database = new Database();

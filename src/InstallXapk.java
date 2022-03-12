@@ -1,13 +1,24 @@
 import config.AbiConfig;
 import config.LocaleConfig;
 import config.ScreenDestinyConfig;
+import manifest.AndroidManifestReader;
+import manifest.ApkInputSource;
+import modle.APK;
+import modle.BaseAPK;
+import modle.ConfigAPK;
+import modle.Dependency;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.xml.sax.SAXException;
+import org.xmlpull.v1.XmlPullParserException;
+import soot.jimple.infoflow.android.axml.AXmlNode;
+import soot.jimple.infoflow.android.manifest.ProcessManifest;
 
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.transform.sax.SAXSource;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -19,79 +30,174 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.xmlpull.v1.XmlPullParserException;
-import soot.jimple.infoflow.android.axml.AXmlNode;
-import soot.jimple.infoflow.android.manifest.ProcessManifest;
+public class InstallXapk {
+    private File appPath;
+    private APK baseAPK;
+    private Database database = new Database();
+    private List<ConfigAPK> configAPK;
 
-public class    InstallXapk {
-    private String appPath;
-    private List<File> installTask = new ArrayList<>();
-    private String appId;
+    private Dependency dependency;
+
     private String launchActivity;
 
     public InstallXapk(String appPath) {
-        this.appPath = appPath;
+        this.appPath = new File(appPath);
+        this.configAPK = new ArrayList<>();
     }
 
-    // 检查manifest得到base apk 和 split apk
-    public void checkPath() {
-        File appFile = new File(appPath);
+    public Dependency getDependency() {
+        return dependency;
+    }
 
-        if (appFile.isDirectory()) {
-            int[] flag = {0, 0, 0};
-            for (File splitApk : Objects.requireNonNull(appFile.listFiles())) {
-                if (splitApk.getName().endsWith(".apk")) {
-                    if (splitApk.getName().contains("config.")) {
-                        if (LocaleConfig.isLocaleSplit(splitApk.getName().substring(0, splitApk.getName().length() - 4))) {
-                            if (flag[0] == 0) {
-                                this.installTask.add(splitApk);
-                                flag[0] = 1;
-                            }
-                        } else if (AbiConfig.isAbiSplit(splitApk.getName().substring(0, splitApk.getName().length() - 4))) {
-                            if (flag[1] == 0) {
-                                this.installTask.add(splitApk);
-                                flag[1] = 1;
-                            }
-                        } else if (ScreenDestinyConfig.isScreenDensitySplit(splitApk.getName().substring(0, splitApk.getName().length() - 4))) {
-                            if (flag[2] == 0) {
-                                this.installTask.add(splitApk);
-                                flag[2] = 1;
-                            }
-                        }
-                    } else {
-                        if (checkBaseApk(splitApk.getAbsolutePath())) {
-                            this.installTask.add(splitApk);
-                        }
+
+    public void preprocessXAPK() {
+        for (File apk : Objects.requireNonNull(this.appPath.listFiles((dir, name) -> name.endsWith(".apk")))) {
+            try {
+                // 得到每个apk的manifest
+                Document manifest = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+                TransformerFactory.newInstance().newTransformer().transform(
+                        new SAXSource(new AndroidManifestReader(), new ApkInputSource(apk.getPath())), new DOMResult(manifest));
+                // 第一步 判断apk类型
+                Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
+                String appID = manifestElement.getAttribute("package");
+
+                if (manifestElement.getAttribute("split").equals("")) {
+                    // 为base apk
+                    this.baseAPK = new BaseAPK(appID, apk, manifestElement);
+                    ProcessManifest processManifest = new ProcessManifest(this.baseAPK.getLocation());
+                    for (AXmlNode node : processManifest.getLaunchableActivityNodes()) {
+                        this.launchActivity = node.getAttribute("name").getValue().toString();
+                        break;
+                    }
+                } else {
+                    // 为split apk 或 config apk
+                    boolean[] isConfig = checkConfigApk(apk.getName());
+                    String subAppID = manifestElement.getAttribute("split");
+                    // 如果是config apk
+                    if (isConfig[0]) {
+                        this.configAPK.add(new ConfigAPK("Locale", appID, subAppID, apk, manifestElement));
+                    } else if (isConfig[1]) {
+                        this.configAPK.add(new ConfigAPK("Abi", appID, subAppID, apk, manifestElement));
+                    } else if (isConfig[2]) {
+                        this.configAPK.add(new ConfigAPK("ScreenDensity", appID, subAppID, apk, manifestElement));
+                    }
+                }
+            } catch (ParserConfigurationException | IOException | TransformerException | XmlPullParserException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public List<ConfigAPK> getConfigTask() {
+        List<ConfigAPK> installTask = new ArrayList<>();
+
+        boolean[] flags = new boolean[]{false, false, false};
+        for (ConfigAPK configAPK : this.configAPK) {
+            switch (configAPK.getType()) {
+                case "Locale" -> {
+                    if (!flags[0]) {
+                        installTask.add(configAPK);
+                        flags[0] = true;
+                    }
+                }
+                case "Abi" -> {
+                    if (!flags[1]) {
+                        installTask.add(configAPK);
+                        flags[1] = true;
+                    }
+                }
+                case "ScreenDensity" -> {
+                    if (!flags[2]) {
+                        installTask.add(configAPK);
+                        flags[2] = true;
                     }
                 }
             }
         }
+
+        return installTask;
     }
 
-    private boolean checkBaseApk(String apkPath) {
-        try {
-            ProcessManifest manifest = new ProcessManifest(apkPath);
-            this.appId = manifest.getAXml().getNodesWithTag("manifest").get(0).getAttribute("package").getValue().toString();
-            for (AXmlNode node : manifest.getLaunchableActivityNodes()) {
-                this.launchActivity = node.getAttribute("name").getValue().toString();
-                break;
+    public void getDependency(List<ConfigAPK> configTask) {
+        if (configTask.size() == 1) {
+            // 添加依赖
+            dependency = new Dependency(baseAPK, new APK(configTask.get(0).getAppID(), configTask.get(0).getType()), 2);
+        } else if (configTask.size() == 2) {
+            // 安装一个
+            for (ConfigAPK apk : configTask) {
+                List<APK> installTask = new ArrayList<>();
+                installTask.add(this.baseAPK);
+                installTask.add(apk);
+                if (install(installTask)) {
+                    dependency = new Dependency(baseAPK, new APK(apk.getAppID(), apk.getType()), 2);
+                    return;
+                }
             }
 
-            if (manifest.getAXml().getNodesWithTag("manifest").get(0).getAttribute("split") == null) {
-                return true;
+            StringBuilder type = new StringBuilder();
+            // 添加依赖
+            for (ConfigAPK apk : configTask) {
+                type.append(apk.getType()).append(",");
             }
-        } catch (IOException | XmlPullParserException e) {
-            e.printStackTrace();
+
+            dependency = new Dependency(baseAPK, new APK(baseAPK.getAppID(), type.substring(0, type.length() - 1)), 2);
+        } else if (configTask.size() == 3) {
+            for (ConfigAPK apk : configTask) {
+                List<APK> installTask = new ArrayList<>();
+                installTask.add(this.baseAPK);
+                installTask.add(apk);
+                if (install(installTask)) {
+                    // 添加依赖
+                    dependency = new Dependency(baseAPK, new APK(apk.getAppID(), apk.getType()), 2);
+                    return;
+                }
+            }
+
+            for (int i = 0; i < configTask.size() - 1; i++) {
+                for (int j = 1; j < configTask.size(); j++) {
+                    List<APK> installTask = new ArrayList<>();
+                    installTask.add(this.baseAPK);
+                    installTask.add(configTask.get(i));
+                    installTask.add(configTask.get(j));
+                    if (install(installTask)) {
+                        // 添加依赖
+                        dependency = new Dependency(baseAPK, new APK(baseAPK.getAppID(), configTask.get(i).getType() + "," + configTask.get(j).getType()), 2);
+                        return;
+                    }
+                }
+            }
+
+            // 添加依赖
+            StringBuilder type = new StringBuilder();
+            for (ConfigAPK apk : configTask) {
+                type.append(apk.getType()).append(",");
+            }
+
+            dependency = new Dependency(baseAPK, new APK(baseAPK.getAppID(), type.substring(0, type.length() - 1)), 2);
+        }
+    }
+
+    private boolean[] checkConfigApk(String apkName) {
+        boolean[] isConfigApk = new boolean[]{false, false, false};
+        apkName = apkName.substring(0, apkName.length() - 4);
+        if (apkName.contains("config.")) {
+            if (LocaleConfig.isLocaleSplit(apkName)) {
+                isConfigApk[0] = true;
+            } else if (AbiConfig.isAbiSplit(apkName)) {
+                isConfigApk[1] = true;
+            } else if (ScreenDestinyConfig.isScreenDensitySplit(apkName)) {
+                isConfigApk[2] = true;
+            }
         }
 
-        return false;
+        return isConfigApk;
     }
 
-    public void install() {
+    public boolean install(List<APK> installTask) {
         try {
             // 传输文件
-            for (File apkFile : this.installTask) {
-                Runtime.getRuntime().exec(String.format("adb push \"%s\" /data/local/tmp/", apkFile.getAbsolutePath())).waitFor();
+            for (APK apk : installTask) {
+                printProcess(Runtime.getRuntime().exec(String.format("adb push %s /data/local/tmp/", apk.getLocation().getAbsolutePath())));
             }
 
 
@@ -100,7 +206,7 @@ public class    InstallXapk {
 
             BufferedReader
                     stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line = null;
+            String line;
             String session = null;
             while ((line = stdInput.readLine()) != null) {
                 String regex = "\\[(.*?)]";
@@ -115,49 +221,72 @@ public class    InstallXapk {
             }
 
             for (int i = 0; i < installTask.size(); i++) {
-                printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-write %s base%d.apk /data/local/tmp/%s", session, i, installTask.get(i).getName())));
+                printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-write %s base%d.apk /data/local/tmp/%s", session, i, installTask.get(i).getLocation().getName())));
             }
 
             printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-commit %s", session)));
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+            return false;
         }
+        waitInstallFinish();
+        boolean flag = LaunchAndCheck();
+        deleteAndUninstall(installTask);
+        return flag;
     }
 
-
-    public void LaunchAndCheck() {
+    private void waitInstallFinish() {
         try {
-            printProcess(Runtime.getRuntime().exec("adb shell am start -n " + this.appId + "/" + this.launchActivity));
-            TimeUnit.MINUTES.sleep(1);
-
-            Process p = Runtime.getRuntime().exec("adb shell cd /data/data/" + this.appId + "/files/assetpack");
-            p.waitFor();
-
-            BufferedReader
-                    stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line = null;
             boolean flag = true;
-            while ((line = stdInput.readLine()) != null) {
-                if (line.contains("No such file or directory")) {
-                    flag = false;
+            while (flag) {
+                Process p;
+                p = Runtime.getRuntime().exec("adb shell pm list packages");
+                p.waitFor();
+
+                BufferedReader
+                        stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                String line;
+                while ((line = stdInput.readLine()) != null) {
+                    if (line.contains(this.baseAPK.getAppID())) {
+                        flag = false;
+                        System.out.println(line);
+                    }
                 }
             }
-
-            if (flag) {
-                createFastFollowRecord();
-            }
-
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+
+
     }
 
-    private void createFastFollowRecord() {
-        System.out.println("fast follow find");
-//        Database database = new Database();
-//        database.insertApk(this.appId, "fast_follow", new String[]{"0", "0", "0", "0", "1", "0"}, 0);
+    public boolean LaunchAndCheck() {
+        try {
+            boolean flag = false;
+            printProcess(Runtime.getRuntime().exec("adb shell am start -n " + this.baseAPK.getAppID() + "/" + this.launchActivity));
+            TimeUnit.SECONDS.sleep(5);
+
+            Process process = Runtime.getRuntime().exec("adb shell dumpsys window | grep mCurrentFocus");
+            process.waitFor();
+
+            BufferedReader
+                    stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = null;
+            while ((line = stdInput.readLine()) != null) {
+                if (line.contains(this.launchActivity)) {
+                    flag = true;
+                    System.out.println(line);
+                }
+            }
+
+            return flag;
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
+
 
     private void printProcess(Process p) {
         try {
@@ -181,25 +310,24 @@ public class    InstallXapk {
         }
     }
 
-    private void deleteAndUninstall() {
+    private void deleteAndUninstall(List<APK> installTask) {
         try {
             // 删除apk包
-            for (File file : installTask) {
-                printProcess(Runtime.getRuntime().exec("adb shell rm /data/local/tmp/" + file.getName()));
+            for (APK apk : installTask) {
+                printProcess(Runtime.getRuntime().exec("adb shell rm /data/local/tmp/" + apk.getLocation().getName()));
             }
             // 卸载程序
-            Runtime.getRuntime().exec("adb uninstall " + this.appId);
+            Runtime.getRuntime().exec("adb uninstall " + this.baseAPK.getAppID());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        InstallXapk installXapk = new InstallXapk("D:\\IDEA\\code\\AppBundleDetector\\test\\Asphalt 8");
-        installXapk.checkPath();
-        installXapk.install();
-        installXapk.LaunchAndCheck();
-        installXapk.deleteAndUninstall();
-        System.out.println(installXapk.installTask);
+        InstallXapk installXapk = new InstallXapk("/Volumes/Data/apk_pure/test/3_Tiles");
+        installXapk.preprocessXAPK();
+        System.out.println(installXapk.getConfigTask());
+        installXapk.getDependency(installXapk.getConfigTask());
+//        System.out.println(installXapk.dependencies);
     }
 }
