@@ -35,12 +35,12 @@ public class AppBundleDetectorXAPK {
     private List<SplitAPK> splitAPK;
 
 
-    public AppBundleDetectorXAPK(String apkPath) {
+    public AppBundleDetectorXAPK(String apkPath, Database database) {
         this.apkFile = new File(apkPath);
         this.dependencies = new ArrayList<>();
         this.splitAPK = new ArrayList<>();
         this.configAPK = new ArrayList<>();
-        this.database = new Database();
+        this.database = database;
     }
 
     private void decompressXAPK(String xapkPath) {
@@ -111,11 +111,11 @@ public class AppBundleDetectorXAPK {
         preprocessXAPK();
         if(!isProcessedBefore(this.baseAPK)) {
             System.out.println("process base apk " + this.baseAPK.getLocation().getName());
-            new APKParser(this.baseAPK).parse();
+            new APKParser(this.baseAPK, this.database).parse();
             System.out.println("process split apk");
             for (SplitAPK splitAPK : this.splitAPK) {
                 System.out.println("process " + splitAPK.getLocation().getName());
-                new APKParser(splitAPK).parse();
+                new APKParser(splitAPK, this.database).parse();
                 System.out.println("++++++++++");
             }
         }
@@ -142,7 +142,7 @@ public class AppBundleDetectorXAPK {
     }
 
     public static void main(String[] args) throws IOException {
-        AppBundleDetectorXAPK detectorXAPK = new AppBundleDetectorXAPK("test/test/Brave Private Web Browser_v1.35.103_apkpure.com.xapk");
+        AppBundleDetectorXAPK detectorXAPK = new AppBundleDetectorXAPK("test/test/Brave Private Web Browser_v1.35.103_apkpure.com.xapk", new Database());
         detectorXAPK.run();
     }
 }

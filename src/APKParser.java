@@ -27,6 +27,7 @@ public class APKParser {
     private List<Dependency> dependencies;
     private List<String> featureInvokeLines = new ArrayList<>();
     private List<String> assetInvokeLines = new ArrayList<>();
+    private Database database;
     private final String androidJarPath = "/Users/clear/Library/Android/sdk/platforms";
     private List<Condition> conditions = new ArrayList<>();
     private final String START_INSTALL = "<com.google.android.play.core.splitinstall.SplitInstallManager: com.google.android.play.core.tasks.Task startInstall(com.google.android.play.core.splitinstall.SplitInstallRequest)>";
@@ -34,8 +35,9 @@ public class APKParser {
     private final String DEFERRED_INSTALL = "<com.google.android.play.core.splitinstall.SplitInstallManager: com.google.android.play.core.tasks.Task deferredInstall(java.util.List)>";
     public String[] features = {"0", "0", "0", "0", "0", "0", "0", "0"};
 
-    public APKParser(APK apk) {
+    public APKParser(APK apk, Database database) {
         this.apk = apk;
+        this.database = database;
         this.dependencies = new ArrayList<>();
         this.isFeature = false;
         getBaseAppInfo();
@@ -306,8 +308,6 @@ public class APKParser {
     }
 
     public void writeToDataBase() {
-        Database database = new Database();
-
         if (features[2].equals("1")) {
             for (String s : this.featureInvokeLines) {
                 database.insertApk(apk.getAppID(), apk.getSubAppID() + ":" + s, new String[]{"0", "0", "1", "0", "0", "0"}, 0);

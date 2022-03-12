@@ -236,7 +236,7 @@ public class InstallXapk {
         return flag;
     }
 
-    private void waitInstallFinish(int session) {
+    private void waitInstallFinish(String session) {
         try {
             boolean flag = true;
 

@@ -9,22 +9,21 @@ import java.util.Queue;
 public class AppBundleDetector {
     private String apksPath;
     private Queue<File> tasks;
-    private final int MAX_THREAD = 10;
+    private Database database;
 
     public AppBundleDetector(String apksPath) {
         this.apksPath = apksPath;
         File apkFiles = new File(this.apksPath);
-
+        this.database = new Database();
         this.tasks = new LinkedList<>(Arrays.asList(Objects.requireNonNull(apkFiles.listFiles())));
     }
 
     // 判断所有的app
     public void run() {
         while (!tasks.isEmpty()) {
-            AppBundleDetectorXAPK appBundleDetector = new AppBundleDetectorXAPK(tasks.poll().getAbsolutePath());
-            try{
+            AppBundleDetectorXAPK appBundleDetector = new AppBundleDetectorXAPK(tasks.poll().getAbsolutePath(), this.database);
+            try {
                 appBundleDetector.run();
-                appBundleDetector.database.connection.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
