@@ -286,11 +286,15 @@ public class InstallXapk {
 
             BufferedReader
                     stdInput = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line = null;
+            String line;
             while ((line = stdInput.readLine()) != null) {
-                if (line.contains(this.launchActivity)) {
+                System.out.println("[+] " + this.baseAPK.getSubAppID() + " " + line);
+                if (line.contains(this.baseAPK.getAppID())) {
                     flag = true;
                     System.out.println(line);
+                    // 模拟器需要重启
+                } else if (line.contains("Application Not Responding: com.android.systemui")) {
+                    restartEmulator();
                 }
             }
 
@@ -324,6 +328,34 @@ public class InstallXapk {
         }
     }
 
+    private void restartEmulator() {
+        try {
+            Runtime.getRuntime().exec(new String[]{"bash", "-c", "source ~/.bash_profile && emulator -avd Pixel_4_API_30 -no-snapshot-load"});
+            boolean flag = true;
+            while (flag) {
+                Process p = Runtime.getRuntime().exec("adb -s emulator-5554 shell getprop dev.bootcomplete");
+
+                p.waitFor();
+                BufferedReader
+                        stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+                String line;
+
+                while ((line = stdInput.readLine()) != null) {
+                    if(line.contains("1")) {
+                        flag = false;
+                    } else {
+                        TimeUnit.SECONDS.sleep(5);
+                    }
+                }
+            }
+
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void deleteAndUninstall(List<APK> installTask) {
         try {
             // 删除apk包
@@ -342,6 +374,6 @@ public class InstallXapk {
         installXapk.preprocessXAPK();
         System.out.println(installXapk.getConfigTask());
         installXapk.getDependency(installXapk.getConfigTask());
-//        System.out.println(installXapk.dependencies);
+        System.out.println(installXapk.dependency);
     }
 }

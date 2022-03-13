@@ -19,15 +19,14 @@ import java.util.Queue;
 public class HandleConfigDependency {
     private File apksPath;
     private Database database;
-    private Queue<File> processTask;
 
     public HandleConfigDependency(String apksPath) {
         this.apksPath = new File(apksPath);
         this.database = new Database();
-        this.processTask = new ArrayDeque<>();
     }
 
-    private void addTask() {
+
+    public void run() {
         for (File xapk : Objects.requireNonNull(this.apksPath.listFiles())) {
             if (xapk.isDirectory()) {
                 for (File apk : Objects.requireNonNull(xapk.listFiles())) {
@@ -40,7 +39,13 @@ public class HandleConfigDependency {
                             Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
                             String appID = manifestElement.getAttribute("package");
                             if (this.database.queryDependencyTypeByAppID(appID) == 3) {
-                                processTask.add(xapk);
+                                InstallXapk installXapk = new InstallXapk(xapk.getPath());
+                                installXapk.preprocessXAPK();
+                                installXapk.getDependency(installXapk.getConfigTask());
+                                APK srcApk = installXapk.getDependency().getDestAPK();
+                                database.updateDependencyUnknown(srcApk.getSubAppID(), srcApk.getAppID());
+                                System.out.println("[+] update " + srcApk.getAppID() + " dependency Unknown to " + srcApk.getSubAppID());
+                                System.out.println("-----------");
                             }
                             break;
                         } catch (ParserConfigurationException | IOException | TransformerException e) {
@@ -49,18 +54,6 @@ public class HandleConfigDependency {
                     }
                 }
             }
-        }
-    }
-
-    public void run() {
-        addTask();
-
-        for (File xapk : processTask) {
-            InstallXapk installXapk = new InstallXapk(xapk.getPath());
-            installXapk.preprocessXAPK();
-            installXapk.getDependency(installXapk.getConfigTask());
-            APK srcApk = installXapk.getDependency().getDestAPK();
-            database.updateDependencyUnknown(srcApk.getSubAppID(), srcApk.getAppID());
         }
     }
 

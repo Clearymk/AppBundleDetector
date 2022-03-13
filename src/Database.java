@@ -129,7 +129,7 @@ public class Database {
 
     public void updateDependencyUnknown(String appId, String srcApkId) {
         try {
-            String updateSql = "update apk_dependency set dest_apk_id = ? and type = 2 where src_apk_id=? and type=3";
+            String updateSql = "update apk_dependency set dest_sub_apk_id = ?, type = 2 where src_apk_id=? and type=3";
 
             PreparedStatement updateStmt = connection.prepareStatement(updateSql);
 
