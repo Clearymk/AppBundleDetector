@@ -124,9 +124,9 @@ public class InstallSingleXAPK {
     public void LaunchAndCheck() {
         try {
             printProcess(Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell am start -n " + this.appId + "/" + this.launchActivity));
-            TimeUnit.MINUTES.sleep(10);
+            TimeUnit.SECONDS.sleep(10);
 
-            Process p = Runtime.getRuntime().exec("python extract_notification.py");
+            Process p = Runtime.getRuntime().exec("python extract_notification.py -id=" + this.deviceId);
             p.waitFor();
 
             BufferedReader
@@ -134,6 +134,7 @@ public class InstallSingleXAPK {
             String line = null;
             boolean flag = false;
             while ((line = stdInput.readLine()) != null) {
+                System.out.println(line);
                 if (line.contains("true")) {
                     flag = true;
                 }
@@ -185,7 +186,7 @@ public class InstallSingleXAPK {
                 printProcess(Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell rm /data/local/tmp/" + file.getName()));
             }
             // 卸载程序
-            Runtime.getRuntime().exec("adb uninstall -s " + this.deviceId + " " + this.appId);
+            printProcess(Runtime.getRuntime().exec("adb -s " + this.deviceId + " uninstall " + this.appId));
         } catch (IOException e) {
             e.printStackTrace();
         }
