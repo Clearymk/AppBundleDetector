@@ -109,7 +109,7 @@ public class AppBundleDetectorXAPK {
         decompressXAPK(this.apkFile.getPath());
         System.out.println("preprocess apks " + this.apkFile.getName());
         preprocessXAPK();
-        if(!isProcessedBefore(this.baseAPK)) {
+        if (!isProcessedBefore(this.baseAPK)) {
             System.out.println("process base apk " + this.baseAPK.getLocation().getName());
             new APKParser(this.baseAPK, this.database).parse();
             System.out.println("process split apk");

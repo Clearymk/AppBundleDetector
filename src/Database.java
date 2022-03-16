@@ -69,6 +69,21 @@ public class Database {
         }
     }
 
+    public boolean queryStatue5ByAppId(String appId) {
+        try {
+            String querySql = "select * from apk where app_id=? and status_5=0";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            queryStmt.setString(1, appId);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     public int queryApkIdByAppIdSubId(String appId, String subAppId) {
         try {
@@ -127,6 +142,20 @@ public class Database {
         return -1;
     }
 
+    public void updateAppStatuesByFastFollow(String appId) {
+        try {
+            String updateSql = "update apk_dependency set status_5 = 1where app_id=?";
+
+            PreparedStatement updateStmt = connection.prepareStatement(updateSql);
+
+            updateStmt.setString(1, appId);
+
+            updateStmt.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void updateDependencyUnknown(String appId, String srcApkId) {
         try {
             String updateSql = "update apk_dependency set dest_sub_apk_id = ?, type = 2 where src_apk_id=? and type=3";
@@ -140,6 +169,27 @@ public class Database {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public String queryAppIdByLocation(String location) {
+        try {
+            String querySql = "select apkid from apkpure where filename=?";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            queryStmt.setString(1, location);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString(1);
+            }
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return "";
     }
 
     public static void main(String[] args) {

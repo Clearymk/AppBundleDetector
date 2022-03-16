@@ -1,7 +1,9 @@
 import manifest.AndroidManifestReader;
 import manifest.ApkInputSource;
 import modle.APK;
+import modle.BaseAPK;
 import modle.Dependency;
+import modle.SplitAPK;
 import org.w3c.dom.*;
 import soot.*;
 import soot.jimple.Stmt;
@@ -235,7 +237,7 @@ public class APKParser {
     }
 
     public void checkInvoke() {
-        if (this.isFeature) {
+        if (this.apk instanceof BaseAPK || this.apk instanceof SplitAPK) {
             G.reset();
             Options.v().set_src_prec(Options.src_prec_apk);
             Options.v().set_output_format(Options.output_format_jimple);

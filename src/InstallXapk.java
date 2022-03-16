@@ -33,16 +33,17 @@ import java.util.regex.Pattern;
 public class InstallXapk {
     private File appPath;
     private APK baseAPK;
-    private Database database = new Database();
     private List<ConfigAPK> configAPK;
+    private String deviceId;
 
     private Dependency dependency;
 
     private String launchActivity;
 
-    public InstallXapk(String appPath) {
+    public InstallXapk(String appPath, String deviceId) {
         this.appPath = new File(appPath);
         this.configAPK = new ArrayList<>();
+        this.deviceId = deviceId;
     }
 
     public Dependency getDependency() {
@@ -197,11 +198,11 @@ public class InstallXapk {
         try {
             // 传输文件
             for (APK apk : installTask) {
-                printProcess(Runtime.getRuntime().exec(String.format("adb push %s /data/local/tmp/", apk.getLocation().getAbsolutePath())));
+                printProcess(Runtime.getRuntime().exec(String.format("adb -s %s push %s /data/local/tmp/", this.deviceId, apk.getLocation().getAbsolutePath())));
             }
 
 
-            Process p = Runtime.getRuntime().exec("adb shell pm install-create");
+            Process p = Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell pm install-create");
             p.waitFor();
 
             BufferedReader
@@ -221,7 +222,7 @@ public class InstallXapk {
             }
 
             for (int i = 0; i < installTask.size(); i++) {
-                printProcess(Runtime.getRuntime().exec(String.format("adb shell pm install-write %s base%d.apk /data/local/tmp/%s", session, i, installTask.get(i).getLocation().getName())));
+                printProcess(Runtime.getRuntime().exec(String.format("adb -s %s shell pm install-write %s base%d.apk /data/local/tmp/%s", this.deviceId, session, i, installTask.get(i).getLocation().getName())));
             }
 
 
@@ -241,7 +242,7 @@ public class InstallXapk {
             boolean flag = true;
 
             Process p;
-            p = Runtime.getRuntime().exec(String.format("adb shell pm install-commit %s", session));
+            p = Runtime.getRuntime().exec(String.format("adb -s %s shell pm install-commit %s", this.deviceId, session));
             p.waitFor();
 
             BufferedReader
@@ -256,7 +257,7 @@ public class InstallXapk {
 
 
             while (flag) {
-                p = Runtime.getRuntime().exec("adb shell pm list packages");
+                p = Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell pm list packages");
                 p.waitFor();
 
                 stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -278,10 +279,10 @@ public class InstallXapk {
     public boolean LaunchAndCheck() {
         try {
             boolean flag = false;
-            printProcess(Runtime.getRuntime().exec("adb shell am start -n " + this.baseAPK.getAppID() + "/" + this.launchActivity));
+            printProcess(Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell am start -n " + this.baseAPK.getAppID() + "/" + this.launchActivity));
             TimeUnit.SECONDS.sleep(5);
 
-            Process process = Runtime.getRuntime().exec("adb shell dumpsys window | grep mCurrentFocus");
+            Process process = Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell dumpsys window | grep mCurrentFocus");
             process.waitFor();
 
             BufferedReader
@@ -333,7 +334,7 @@ public class InstallXapk {
             Runtime.getRuntime().exec(new String[]{"bash", "-c", "source ~/.bash_profile && emulator -avd Pixel_4_API_30 -no-snapshot-load"});
             boolean flag = true;
             while (flag) {
-                Process p = Runtime.getRuntime().exec("adb -s emulator-5554 shell getprop dev.bootcomplete");
+                Process p = Runtime.getRuntime().exec("adb -s " + deviceId + " shell getprop dev.bootcomplete");
 
                 p.waitFor();
                 BufferedReader
@@ -342,7 +343,7 @@ public class InstallXapk {
                 String line;
 
                 while ((line = stdInput.readLine()) != null) {
-                    if(line.contains("1")) {
+                    if (line.contains("1")) {
                         flag = false;
                     } else {
                         TimeUnit.SECONDS.sleep(5);
@@ -360,17 +361,17 @@ public class InstallXapk {
         try {
             // 删除apk包
             for (APK apk : installTask) {
-                printProcess(Runtime.getRuntime().exec("adb shell rm /data/local/tmp/" + apk.getLocation().getName()));
+                printProcess(Runtime.getRuntime().exec("adb " + this.deviceId + "shell rm /data/local/tmp/" + apk.getLocation().getName()));
             }
             // 卸载程序
-            Runtime.getRuntime().exec("adb uninstall " + this.baseAPK.getAppID());
+            Runtime.getRuntime().exec("adb -s " + this.deviceId + " uninstall " + this.baseAPK.getAppID());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        InstallXapk installXapk = new InstallXapk("/Volumes/Data/apk_pure/test/3_Tiles");
+        InstallXapk installXapk = new InstallXapk("/Volumes/Data/apk_pure/test/3_Tiles", "emulator-5554");
         installXapk.preprocessXAPK();
         System.out.println(installXapk.getConfigTask());
         installXapk.getDependency(installXapk.getConfigTask());

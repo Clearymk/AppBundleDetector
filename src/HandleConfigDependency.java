@@ -39,7 +39,7 @@ public class HandleConfigDependency {
                             Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
                             String appID = manifestElement.getAttribute("package");
                             if (this.database.queryDependencyTypeByAppID(appID) == 3) {
-                                InstallXapk installXapk = new InstallXapk(xapk.getPath());
+                                InstallXapk installXapk = new InstallXapk(xapk.getPath(), "emulator-5554");
                                 installXapk.preprocessXAPK();
                                 installXapk.getDependency(installXapk.getConfigTask());
                                 APK srcApk = installXapk.getDependency().getDestAPK();
