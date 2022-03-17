@@ -30,8 +30,13 @@ public class Copy {
         this.database = new Database();
     }
 
-    public void copy(int status, String folder) {
-        List<String> appIds = database.queryApkIdByStatue(status);
+    public void copy() {
+        List<String> appIds_1 = database.queryApkIdByStatue(1);
+        List<String> appIds_2 = database.queryApkIdByStatue(2);
+        List<String> appIds_3 = database.queryApkIdByStatue(3);
+        List<String> appIds_4 = database.queryApkIdByStatue(4);
+        List<String> appIds_5 = database.queryApkIdByStatue(5);
+        List<String> appIds_6 = database.queryApkIdByStatue(6);
         for (File file : Objects.requireNonNull(new File(inputPath).listFiles())) {
             if (file.isDirectory()) {
                 for (File apk : Objects.requireNonNull(file.listFiles())) {
@@ -42,10 +47,31 @@ public class Copy {
                                     new SAXSource(new AndroidManifestReader(), new ApkInputSource(apk.getPath())), new DOMResult(manifest));
                             Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
                             String appID = manifestElement.getAttribute("package");
-//                            System.out.println(appID);
-                            if (appIds.contains(appID)) {
-                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + folder + File.separator + file.getName()));
-                                System.out.println("copy " + apk.getPath() + " to " + folder);
+
+                            if (appIds_1.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + featureInstallTime + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetInstallTime);
+                            }
+                            if (appIds_2.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + featureCondition + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetFastFollow);
+                            }
+                            if (appIds_3.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + featureOnDemand + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetOndemand);
+                            }
+
+                            if (appIds_4.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + assetInstallTime + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetInstallTime);
+                            }
+                            if (appIds_5.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + assetFastFollow + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetFastFollow);
+                            }
+                            if (appIds_6.contains(appID)) {
+                                FileUtils.copyDirectory(file, new File(outputPath + File.separator + assetOndemand + File.separator + file.getName()));
+                                System.out.println("copy " + file.getPath() + " to " + assetOndemand);
                             }
                             break;
                         } catch (TransformerException | ParserConfigurationException | IOException e) {
@@ -59,7 +85,7 @@ public class Copy {
 
     public static void main(String[] args) {
         Copy copy = new Copy();
-        copy.copy(2, Copy.featureOnDemand);
+        copy.copy();
     }
 
 }
