@@ -321,7 +321,7 @@ public class APKParser {
         if (features[5].equals("1")) {
 //            database.insertApk(this.appId, this.subAppId, new String[]{"0", "0", "0", "0", "0", "1"}, 0);
             for (String s : this.assetInvokeLines) {
-                database.insertApk(apk.getAppID(), apk.getSubAppID() + ":" + s, new String[]{"0", "0", "1", "0", "0", "0"}, 0);
+                database.insertApk(apk.getAppID(), apk.getSubAppID() + ":" + s, new String[]{"0", "0", "0", "0", "0", "1"}, 0);
             }
 
             features[5] = "0";
