@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="res">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/res/soot-infoflow-android-2.9.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/res/mysql-connector-java-8.0.27.jar!/" />
+      <root url="jar://$PROJECT_DIR$/res/soot-4.3.0-jar-with-dependencies.jar!/" />
+      <root url="jar://$PROJECT_DIR$/res/soot-infoflow-summaries-2.9.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/res/zip4j-2.9.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
