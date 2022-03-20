@@ -1,6 +1,8 @@
 
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Database {
@@ -105,6 +107,42 @@ public class Database {
         return 0;
     }
 
+    public List<String> queryApkIdByStatue(int status) {
+        try {
+            List<String> result = new ArrayList<>();
+            String querySql = "select app_id from apk where status_" + status + "=1";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            while (resultSet.next()) {
+                result.add(resultSet.getString(1));
+            }
+
+            return result;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public boolean queryStatusBy(String appId) {
+        try {
+            String querySql = "select id from apk where app_id=?";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            queryStmt.setString(1, appId);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public boolean queryApkIdByAppId(String appId) {
         try {
             String querySql = "select id from apk where app_id=?";
@@ -142,6 +180,27 @@ public class Database {
         return -1;
     }
 
+    public String queryDependencyIDByAppID(String appId) {
+        try {
+            String querySql = "select dest_sub_apk_id from apk_dependency where src_apk_id=?";
+
+            PreparedStatement queryStmt = connection.prepareStatement(querySql);
+
+            queryStmt.setString(1, appId);
+
+            ResultSet resultSet = queryStmt.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getString(1);
+            }
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return "";
+    }
+
     public void updateAppStatuesByFastFollow(String appId) {
         try {
             String updateSql = "update apk_dependency set status_5 = 1where app_id=?";
@@ -158,7 +217,7 @@ public class Database {
 
     public void updateDependencyUnknown(String appId, String srcApkId) {
         try {
-            String updateSql = "update apk_dependency set dest_sub_apk_id = ?, type = 2 where src_apk_id=? and type=3";
+            String updateSql = "update apk_dependency set dest_sub_apk_id = ?, type = 2 where src_apk_id=?";
 
             PreparedStatement updateStmt = connection.prepareStatement(updateSql);
 

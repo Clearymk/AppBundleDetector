@@ -192,12 +192,12 @@ public class APKParser {
                     case "dist:min-sdk" -> {
                         type = 3;
                         key = "min-sdk";
-                        value = element.getAttribute("dist:name");
+                        value = element.getAttribute("dist:value");
                     }
                     case "dist:max-sdk" -> {
                         type = 3;
                         key = "max-sdk";
-                        value = element.getAttribute("dist:name");
+                        value = element.getAttribute("dist:value");
                     }
                     case "dist:device-groups" -> {
                         type = 4;
@@ -207,7 +207,7 @@ public class APKParser {
                     default -> {
                         type = 5;
                         key = element.getNodeName();
-                        value = element.getAttribute("dist:name");
+                        value = element.getAttribute("dist:value");
                     }
                 }
             }
@@ -247,7 +247,7 @@ public class APKParser {
             Options.v().set_allow_phantom_refs(true);
             Options.v().set_process_multiple_dex(true);
             Options.v().set_whole_program(true);
-
+            System.out.println(this.apk.getLocation().getAbsolutePath());
             soot.Scene.v().loadNecessaryClasses();
 
             for (SootClass sootClass : Scene.v().getApplicationClasses()) {

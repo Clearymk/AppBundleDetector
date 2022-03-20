@@ -12,15 +12,15 @@ import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.sax.SAXSource;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
 
-public class HandleConfigDependency {
+public class ReCheck {
     private File apksPath;
     private Database database;
 
-    public HandleConfigDependency(String apksPath) {
+    public ReCheck(String apksPath) {
         this.apksPath = new File(apksPath);
         this.database = new Database();
     }
@@ -38,14 +38,16 @@ public class HandleConfigDependency {
                             // 第一步 判断apk类型
                             Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
                             String appID = manifestElement.getAttribute("package");
-                            if (this.database.queryDependencyTypeByAppID(appID) == 3) {
-                                InstallXapk installXapk = new InstallXapk(xapk.getPath(), "emulator-5554");
+                            if (this.database.queryDependencyTypeByAppID(appID) == 2 && !this.database.queryDependencyIDByAppID(appID).contains(",")) {
+                                InstallXapk installXapk = new InstallXapk(xapk.getPath(), "emulator-5558");
                                 installXapk.preprocessXAPK();
-                                installXapk.getDependency(installXapk.getConfigTask());
-                                APK srcApk = installXapk.getDependency().getDestAPK();
-                                database.updateDependencyUnknown(srcApk.getSubAppID(), srcApk.getAppID());
-                                System.out.println("[+] update " + srcApk.getAppID() + " dependency Unknown to " + srcApk.getSubAppID());
-                                System.out.println("-----------");
+                                List<APK> installTask = new ArrayList<>();
+                                installTask.add(installXapk.baseAPK);
+                                if (installXapk.install(installTask)) {
+                                    database.updateDependencyUnknown("base", installXapk.baseAPK.getAppID());
+                                    System.out.println("[+] update " + installXapk.baseAPK.getAppID() + " dependency to base");
+                                    System.out.println("-----------");
+                                }
                             }
                             break;
                         } catch (ParserConfigurationException | IOException | TransformerException e) {
@@ -58,7 +60,7 @@ public class HandleConfigDependency {
     }
 
     public static void main(String[] args) {
-        HandleConfigDependency handleConfigDependency = new HandleConfigDependency("/Volumes/Data/apk_pure/play_xapk/");
-        handleConfigDependency.run();
+        ReCheck reCheck = new ReCheck("/Volumes/Data/apk_pure/download_x/");
+        reCheck.run();
     }
 }

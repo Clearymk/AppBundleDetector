@@ -21,9 +21,14 @@ public class AppBundleDetector {
     // 判断所有的app
     public void run() {
         while (!tasks.isEmpty()) {
-            AppBundleDetectorXAPK appBundleDetector = new AppBundleDetectorXAPK(tasks.poll().getAbsolutePath(), this.database);
+            File dir = new File(tasks.peek().getParent() + File.separator + tasks.peek().getName().replaceAll(".xapk", "").replaceAll(" ", "_"));
+            if (dir.exists()) {
+                tasks.poll();
+                continue;
+            }
             try {
-                appBundleDetector.run();
+                AppBundleDetectorXAPK detector = new AppBundleDetectorXAPK(tasks.poll().getAbsolutePath(), this.database);
+                detector.run();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -32,7 +37,7 @@ public class AppBundleDetector {
 
 
     public static void main(String[] args) {
-        AppBundleDetector detector = new AppBundleDetector("/Volumes/Data/apk_pure/download_x");
+        AppBundleDetector detector = new AppBundleDetector("/Volumes/Data/apk_pure/redownload");
         detector.run();
     }
 }

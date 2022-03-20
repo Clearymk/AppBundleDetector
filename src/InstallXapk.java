@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 
 public class InstallXapk {
     private File appPath;
-    private APK baseAPK;
+    public APK baseAPK;
     private List<ConfigAPK> configAPK;
     private String deviceId;
 
@@ -361,7 +361,8 @@ public class InstallXapk {
         try {
             // 删除apk包
             for (APK apk : installTask) {
-                printProcess(Runtime.getRuntime().exec("adb " + this.deviceId + "shell rm /data/local/tmp/" + apk.getLocation().getName()));
+                System.out.println("adb -s " + this.deviceId + "shell rm /data/local/tmp/" + apk.getLocation().getName());
+                printProcess(Runtime.getRuntime().exec("adb -s " + this.deviceId + " shell rm /data/local/tmp/" + apk.getLocation().getName()));
             }
             // 卸载程序
             Runtime.getRuntime().exec("adb -s " + this.deviceId + " uninstall " + this.baseAPK.getAppID());

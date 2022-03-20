@@ -26,36 +26,41 @@ public class CheckFastFollow {
     public void run() {
         boolean flag = false;
         for (File xapk : Objects.requireNonNull(this.apksPath.listFiles())) {
-            if (xapk.isDirectory()) {
-                if (!xapk.getName().equals("")) {
-                    flag = true;
-                }
+            try {
+                if (xapk.isDirectory()) {
+                    if (!xapk.getName().equals("")) {
+                        flag = true;
+                    }
 
-                if (flag) {
-                    for (File apk : Objects.requireNonNull(xapk.listFiles())) {
-                        if (apk.getName().endsWith(".apk")) {
-                            try {
-                                Document manifest = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-                                TransformerFactory.newInstance().newTransformer().transform(
-                                        new SAXSource(new AndroidManifestReader(), new ApkInputSource(apk.getPath())), new DOMResult(manifest));
-                                // 第一步 判断apk类型
-                                Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
-                                String appID = manifestElement.getAttribute("package");
-                                if (this.database.queryStatue5ByAppId(appID)) {
-                                    InstallSingleXAPK installSingleXAPK = new InstallSingleXAPK(xapk.getPath(), "emulator-5556");
-                                    installSingleXAPK.checkPath();
-                                    installSingleXAPK.install();
-                                    installSingleXAPK.LaunchAndCheck();
-                                    installSingleXAPK.deleteAndUninstall();
-                                    System.out.println("-----------");
+                    if (flag) {
+                        for (File apk : Objects.requireNonNull(xapk.listFiles())) {
+                            if (apk.getName().endsWith(".apk")) {
+                                try {
+                                    Document manifest = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+                                    TransformerFactory.newInstance().newTransformer().transform(
+                                            new SAXSource(new AndroidManifestReader(), new ApkInputSource(apk.getPath())), new DOMResult(manifest));
+                                    // 第一步 判断apk类型
+                                    Element manifestElement = (Element) manifest.getElementsByTagName("manifest").item(0);
+                                    String appID = manifestElement.getAttribute("package");
+                                    if (this.database.queryStatue5ByAppId(appID)) {
+                                        InstallSingleXAPK installSingleXAPK = new InstallSingleXAPK(xapk.getPath(), "emulator-5556");
+                                        installSingleXAPK.checkPath();
+                                        installSingleXAPK.install();
+                                        installSingleXAPK.LaunchAndCheck();
+                                        installSingleXAPK.deleteAndUninstall();
+                                        System.out.println("-----------");
+                                    }
+                                    break;
+                                } catch (ParserConfigurationException | IOException | TransformerException e) {
+                                    e.printStackTrace();
                                 }
-                                break;
-                            } catch (ParserConfigurationException | IOException | TransformerException e) {
-                                e.printStackTrace();
                             }
                         }
                     }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                continue;
             }
         }
     }
